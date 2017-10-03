@@ -1,0 +1,84 @@
+import numpy as np
+import os
+import re
+from scipy.misc import imread
+from torch.utils.data import Dataset, DataLoader
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
+from time import time
+from skimage import io, transform
+
+class MaterialsDataset(Dataset):
+    """ PBR Material dataset
+        Set requested_textures to select which textures to return.
+        If a material does not have a requested texture it is omitted from dataset.
+        Requested textures can be "albedo", "normal", "metallic", "roughness", "ao"
+    """
+    def __init__(self, root_folder, requested_textures = ["albedo","normal"]):
+
+        folders = os.listdir(root_folder)
+        self.data = dict()
+        self.materials_list = list()
+
+        for material in folders:
+            folder = os.path.join(root_folder,material)
+            texture_dict = dict()
+            for texture in requested_textures:
+                file_name = "{}-{}.png".format(material,texture)
+
+                path = os.path.join(folder,file_name)
+                if os.path.exists(path):
+                    texture_dict[texture] = os.path.join(folder,path)
+
+            # check if all requested textures are found
+            if len(texture_dict) == len(requested_textures):
+                self.data[material] = texture_dict
+                self.materials_list.append(material)
+
+    def __len__(self):
+        return len(self.materials_list)
+
+    def __getitem__(self, idx):
+
+        tic = time()
+        material = self.materials_list[idx]
+
+        # get albedo
+        albedo_file = self.data[material].get("albedo",None)
+        if albedo_file is not None:
+            albedo = imread(albedo_file,mode='RGB')
+            albedo = np.moveaxis(albedo, -1, 0)
+        # get normal
+        normal_file = self.data[material].get("normal",None)
+        if normal_file is not None:
+            normal = imread(normal_file,mode='RGB')
+            normal = np.moveaxis(normal, -1, 0)
+
+        item = {
+                "albedo": albedo,
+                "normal": normal
+                }
+
+        print(time()-tic)
+        return item
+
+def test():
+    dataset = MaterialsDataset("/Users/sundholm/Data/PBR_dataset_cleaned")
+    test_loader = DataLoader(dataset, batch_size=16, shuffle=True)
+    for batch_idx, batch_item in enumerate(test_loader):
+        albedo = batch_item["albedo"]
+        normal = batch_item["normal"]
+        #import pdb; pdb.set_trace()
+        albedo_grid = make_grid(albedo, nrow=4).numpy()
+        albedo_grid = np.moveaxis(albedo_grid,0,-1)
+        normal_grid = make_grid(normal, nrow=4).numpy()
+        normal_grid = np.moveaxis(normal_grid,0,-1)
+
+        import pdb; pdb.set_trace()
+        plt.imshow(albedo_grid)
+        import pdb; pdb.set_trace()
+        plt.imshow(normal_grid)
+        plt.show()
+
+if __name__ == "__main__":
+    test()
