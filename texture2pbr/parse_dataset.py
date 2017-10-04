@@ -1,5 +1,6 @@
 import os
 import shutil
+import cv2
 
 """
     This cleaning script iterates through folders and finds textures of different types
@@ -58,7 +59,10 @@ for material in texture_dict:
         src = texture_dict[material][texture_type]
         dst = os.path.join(folder,"{}-{}.png".format(material,texture_type))
         print(dst)
-        try:
-            shutil.copyfile(src,dst)
-        except:
-            import pdb; pdb.set_trace()
+        #try:
+            #shutil.copyfile(src,dst)
+        im = cv2.imread(src)
+        im = cv2.resize(im,(128,128))
+        cv2.imwrite(dst,im)
+        #except:
+        #import pdb; pdb.set_trace()

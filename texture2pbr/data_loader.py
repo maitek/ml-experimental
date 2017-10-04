@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 from time import time
-from skimage import io, transform
+import cv2
 
 class MaterialsDataset(Dataset):
     """ PBR Material dataset
@@ -40,34 +40,37 @@ class MaterialsDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        tic = time()
+
         material = self.materials_list[idx]
 
         # get albedo
         albedo_file = self.data[material].get("albedo",None)
         if albedo_file is not None:
-            albedo = imread(albedo_file,mode='RGB')
+            albedo = cv2.imread(albedo_file)
             albedo = np.moveaxis(albedo, -1, 0)
+            albedo = albedo.astype(np.float32)/255.0
         # get normal
         normal_file = self.data[material].get("normal",None)
         if normal_file is not None:
             normal = imread(normal_file,mode='RGB')
             normal = np.moveaxis(normal, -1, 0)
+            normal = albedo.astype(np.float32)/255.0
 
         item = {
                 "albedo": albedo,
                 "normal": normal
                 }
 
-        print(time()-tic)
+
         return item
 
 def test():
     dataset = MaterialsDataset("/Users/sundholm/Data/PBR_dataset_cleaned")
-    test_loader = DataLoader(dataset, batch_size=16, shuffle=True)
+    test_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
     for batch_idx, batch_item in enumerate(test_loader):
         albedo = batch_item["albedo"]
         normal = batch_item["normal"]
+        print(batch_idx)
         #import pdb; pdb.set_trace()
         albedo_grid = make_grid(albedo, nrow=4).numpy()
         albedo_grid = np.moveaxis(albedo_grid,0,-1)
@@ -76,8 +79,8 @@ def test():
 
         import pdb; pdb.set_trace()
         plt.imshow(albedo_grid)
-        import pdb; pdb.set_trace()
-        plt.imshow(normal_grid)
+        #import pdb; pdb.set_trace()
+        #plt.imshow(normal_grid)
         plt.show()
 
 if __name__ == "__main__":
