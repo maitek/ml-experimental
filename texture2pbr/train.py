@@ -87,12 +87,12 @@ for epoch in forever():
         test_loss.append(loss.data[0])
 
     print('Train loss: {:.4f}, Test loss: {:.4f} time: {:.4f} seconds'.format(np.mean(train_loss),np.mean(test_loss), time()-tic))
-    if epoch % 20 == 0:
+    if epoch % 10 == 0:
 
         if args.cuda:
             output, data = output.cpu(), normal.cpu()
 
-        normal_grid = make_grid(output.data[0], nrow=4).numpy()
+        normal_grid = make_grid(output.data, nrow=4).numpy()
         normal_grid = np.moveaxis(normal_grid,0,-1)
         #normal_grid = np.dstack((normal_grid, np.zeros_like(normal_grid[:,:,1])))
 
