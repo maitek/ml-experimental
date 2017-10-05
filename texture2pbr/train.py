@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import numpy as np
 import os
 from time import time
-
+from torchvision.utils import make_grid
 from itertools import count as forever
 
 
@@ -37,7 +37,7 @@ class Net(nn.Module):
         x = F.relu(x)
         x = self.batch_norm2(self.conv2(x))
         x = F.relu(x)
-        x = F.tanh(self.conv3(x))
+        x = F.sigmoid(self.conv3(x))
 
         return x
 
@@ -73,3 +73,18 @@ for epoch in forever():
         test_loss.append(loss.data[0])
 
     print('Train loss: {:.4f}, Test loss: {:.4f} time: {:.4f} seconds'.format(np.mean(train_loss),np.mean(test_loss), time()-tic))
+    if epoch % 10 == 0:
+        normal_grid = make_grid(output.data[0], nrow=4).numpy()
+        normal_grid = np.moveaxis(normal_grid,0,-1)
+        normal_grid = np.dstack((normal_grid, np.zeros_like(normal_grid[:,:,1])))
+
+        plt.subplot(121)
+        plt.imshow(normal_grid)
+
+        normal_grid_true = make_grid(data.data[0], nrow=4).numpy()
+        normal_grid_true = np.moveaxis(normal_grid_true,0,-1)
+        normal_grid_true = np.dstack((normal_grid_true, np.zeros_like(normal_grid_true[:,:,1])))
+        import pdb; pdb.set_trace()
+        plt.subplot(122)
+        plt.imshow(normal_grid_true)
+        plt.show()
