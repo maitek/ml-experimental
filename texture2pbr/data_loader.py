@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import re
-from scipy.misc import imread
 from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -28,8 +27,9 @@ class MaterialsDataset(Dataset):
                 file_name = "{}-{}.png".format(material,texture)
 
                 path = os.path.join(folder,file_name)
+
                 if os.path.exists(path):
-                    texture_dict[texture] = os.path.join(folder,path)
+                    texture_dict[texture] = path
 
             # check if all requested textures are found
             if len(texture_dict) == len(requested_textures):
@@ -56,13 +56,14 @@ class MaterialsDataset(Dataset):
         # get albedo
         albedo_file = self.data[material].get("albedo",None)
         if albedo_file is not None:
+
             albedo = cv2.imread(albedo_file)
             albedo = np.moveaxis(albedo, -1, 0)
             albedo = albedo.astype(np.float32)/255.0
         # get normal
         normal_file = self.data[material].get("normal",None)
         if normal_file is not None:
-            normal = imread(normal_file,mode='RGB')
+            normal = cv2.imread(normal_file)
             normal = np.moveaxis(normal, -1, 0)
             normal = albedo.astype(np.float32)/255.0
             normal = normal[:2,:,:] # only RG contains info

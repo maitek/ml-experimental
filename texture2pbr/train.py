@@ -14,8 +14,8 @@ from torchvision.utils import make_grid
 from itertools import count as forever
 
 
-dataset_train = MaterialsDataset("/Users/sundholm/Data/PBR_dataset_cleaned", test = False)
-dataset_test = MaterialsDataset("/Users/sundholm/Data/PBR_dataset_cleaned", test = True)
+dataset_train = MaterialsDataset("PBR_dataset_cleaned/", test = False)
+dataset_test = MaterialsDataset("PBR_dataset_cleaned/", test = True)
 train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=16, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=16, shuffle=True)
 

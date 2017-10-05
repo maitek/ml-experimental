@@ -7,8 +7,8 @@ from torchvision.utils import make_grid
     Textures are then renamed with prefix (albedo, normal, metallic, roughness, ao)
 """
 
-INPUT_FOLDER = "/Users/sundholm/Data/PBR_dataset"
-OUTPUT_FOLDER = "/Users/sundholm/Data/PBR_dataset_cleaned"
+INPUT_FOLDER = "PBR_dataset"
+OUTPUT_FOLDER = "PBR_dataset_cleaned"
 
 folders = [x for x in os.listdir(INPUT_FOLDER) if os.path.isdir(os.path.join(INPUT_FOLDER,x))]
 
@@ -62,7 +62,7 @@ for material in texture_dict:
         #try:
             #shutil.copyfile(src,dst)
         im = cv2.imread(src)
-        im = cv2.resize(im,(128,128))
+        im = cv2.resize(im,(256,256))
         cv2.imwrite(dst,im)
         #except:
         #import pdb; pdb.set_trace()
