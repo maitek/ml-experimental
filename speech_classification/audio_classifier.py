@@ -57,7 +57,7 @@ class AudioClassifier(nn.Module):
         x = self.dense(hx)
         return self.log_softmax(x)
 
-batch_size = 1
+batch_size = 10
 
 train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=0)
 model = AudioClassifier(num_classes=dataset_train.num_classes)

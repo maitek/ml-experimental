@@ -71,6 +71,11 @@ class AudioDataset(Dataset):
             path = self.val_data[idx]
         fs, wave_sequence = wav.read(path)
 
+        # make sure all sequences are same size
+        pad_size = max(16000-len(wave_sequence),0)
+        wave_sequence = np.concatenate([wave_sequence,np.zeros(pad_size,dtype=wave_sequence.dtype)])
+        wave_sequence = wave_sequence[:16000]
+
         f, t, Z = signal.stft(wave_sequence, fs, nperseg=128)
         Z = np.dstack((Z.real,Z.imag))
         Z = np.swapaxes(Z,0,2)
@@ -78,13 +83,14 @@ class AudioDataset(Dataset):
         widths = np.arange(1, 2048)
 
         class_name = path.split("/")[-2]
+        print(len(wave_sequence))
 
         item = {
             "class_idx": self.class_lookup[class_name],
             "class_name": class_name,
             "wave_sequence": np.expand_dims(wave_sequence,0).astype(np.float32)/np.std(wave_sequence),
-            "fs": fs,
-            "spectrum": Z,
+            "fs": fs
+            #"spectrum": Z,
         }
         return item
 
@@ -98,7 +104,7 @@ def test():
         #plt.imshow(np.abs(Z[0,:,:],Z[1,:,:]))
         #import pdb; pdb.set_trace()
 
-        Z = np.abs(Z[0,0,:,:].numpy(),Z[0,1,:,:].numpy())
+        #Z = np.abs(Z[0,0,:,:].numpy(),Z[0,1,:,:].numpy())
         #Z = Z[0,:,:,:].numpy()
         import pdb; pdb.set_trace()
         #plt.imshow(np.abs(Z[0,:,:], Z[1,:,:])*np.angle(Z[0,:,:], Z[1,:,:]))
