@@ -12,6 +12,8 @@ class AudioDataset(Dataset):
     def __init__(self, root_folder, train=True):
 
         self.class_list = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go"]
+        self.num_classes = len(self.class_list)
+
         self.class_lookup = dict()
         for idx, item in enumerate(self.class_list):
             self.class_lookup[item] = idx
@@ -67,17 +69,22 @@ class AudioDataset(Dataset):
             path = self.train_data[idx]
         else:
             path = self.val_data[idx]
-        fs, wave_file = wav.read(path)
-        f, t, Z = signal.stft(wave_file, fs, nperseg=128)
+        fs, wave_sequence = wav.read(path)
+
+        f, t, Z = signal.stft(wave_sequence, fs, nperseg=128)
+        Z = np.dstack((Z.real,Z.imag))
+        Z = np.swapaxes(Z,0,2)
+        Z = np.swapaxes(Z,1,2)
+        widths = np.arange(1, 2048)
 
         class_name = path.split("/")[-2]
 
         item = {
-            "y": self.class_lookup[class_name],
+            "class_idx": self.class_lookup[class_name],
             "class_name": class_name,
-            "wave_file": wave_file,
+            "wave_sequence": np.expand_dims(wave_sequence,0).astype(np.float32)/np.std(wave_sequence),
             "fs": fs,
-            "spectrum": np.abs(Z),
+            "spectrum": Z,
         }
         return item
 
@@ -87,8 +94,14 @@ def test():
     test_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0)
     for batch_idx, batch_item in enumerate(test_loader):
         Z = batch_item["spectrum"]
+
+        #plt.imshow(np.abs(Z[0,:,:],Z[1,:,:]))
+        #import pdb; pdb.set_trace()
+
+        Z = np.abs(Z[0,0,:,:].numpy(),Z[0,1,:,:].numpy())
+        #Z = Z[0,:,:,:].numpy()
         import pdb; pdb.set_trace()
-        plt.imshow(Z.numpy()[0,:,:])
+        #plt.imshow(np.abs(Z[0,:,:], Z[1,:,:])*np.angle(Z[0,:,:], Z[1,:,:]))
         #import pdb; pdb.set_trace()
         #plt.imshow(normal_grid)
         plt.show()
