@@ -7,12 +7,18 @@ import matplotlib.pyplot as plt
 from time import time
 import cv2
 import random
-
+import time
+from tqdm import tqdm
 
 class PatchDataset(DataLoader):
     def __init__(self, root_folder, patch_size = (64,64)):
         folders = os.listdir(root_folder)
-        self.image_list = [os.path.join(root_folder,x) for x in folders]
+        image_file_list = [os.path.join(root_folder,x) for x in folders]
+        self.image_list = []
+        for file_name in tqdm(image_file_list):
+            image = cv2.imread(file_name)
+            image = image.astype(np.float32)/255
+            self.image_list.append(image)
         self.patch_size = patch_size
     def __len__(self):
         return len(self.image_list)
@@ -25,11 +31,9 @@ class PatchDataset(DataLoader):
         return crop
 
     def __getitem__(self, idx):
-        image_file = self.image_list[idx]
-        image = cv2.imread(image_file)
+        image = self.image_list[idx]
         patch = self.random_crop(image, self.patch_size)
-        patch = patch.astype(np.float32)/255.0
-        patch = np.moveaxis(patch, -1, 0)
+        patch = np.swapaxes(patch, 0, 2)
         return patch
 
 
@@ -107,6 +111,14 @@ def test_patch_dataset():
     img = dataset[0]
     import pdb; pdb.set_trace()
     test_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
+    tic = time.time()
+    for it in range(10):
+        for batch_idx, batch_item in enumerate(test_loader):
+            batch_item = 0
+            print(it)
+            # do something
+    print(time.time()-tic)
+
     for batch_idx, batch_item in enumerate(test_loader):
         image_grid = make_grid(batch_item, nrow=4).numpy()
         image_grid = np.moveaxis(image_grid,0,-1)

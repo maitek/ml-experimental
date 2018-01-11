@@ -12,17 +12,19 @@ from torch.utils.data import Dataset, DataLoader
 #from tensorflow.examples.tutorials.mnist import input_data
 from data_loader import PatchDataset
 
+cuda = True
+
 #mnist = input_data.read_data_sets('/Users/sundholm/Data/MNIST_data', one_hot=True)
-mb_size = 10
+mb_size = 96
 z_dim = 5
 X_dim = 64
 h_dim = 128
 cnt = 0
-lr = 1e-3
+lr = 1e-4
 out_dir = "out_aae3"
 
 nc = 3
-nz = 64
+nz = 512
 ngf = 1
 ndf = 1
 
@@ -48,7 +50,7 @@ class Decoder(nn.Module):
             nn.ReLU(True),
             # state size. (ngf) x 32 x 32
             nn.ConvTranspose2d(    ngf,      nc, 4, 2, 1, bias=False),
-            nn.Tanh()
+            nn.Sigmoid()
             # state size. (nc) x 64 x 64
         ]
         for idx, module in enumerate(self.main):
@@ -101,6 +103,10 @@ D = torch.nn.Sequential(
 Q = Encoder()
 P = Decoder()
 
+if cuda:
+    Q = Q.cuda()
+    P = P.cuda()
+    D = D.cuda()
 
 def reset_grad():
     Q.zero_grad()
@@ -120,6 +126,9 @@ for it in range(1000000):
         #X = sample_X(mb_size)
         """ Reconstruction phase """
         X = Variable(batch_item)
+        if cuda:
+            X = X.cuda()
+
         z_sample = Q(X)
 
         X_sample = P(z_sample)
@@ -134,13 +143,15 @@ for it in range(1000000):
         # Discriminator
         for _ in range(5):
             z_real = Variable(torch.randn(mb_size, nz))
+            if cuda:
+                z_real = z_real.cuda()
+
             z_fake = Q(X).view(mb_size,-1)
 
             D_real = D(z_real)
             D_fake = D(z_fake)
 
             #D_loss = -torch.mean(torch.log(D_real) + torch.log(1 - D_fake))
-
             D_loss = -(torch.mean(D_real) - torch.mean(D_fake))
 
             D_loss.backward()
@@ -163,14 +174,19 @@ for it in range(1000000):
         Q_solver.step()
         reset_grad()
 
-        # Print and plot every now and then
-        if it % 1000 == 0:
-            #import pdb; pdb.set_trace()
+        if it % 100 == 0:
             print('Iter-{}; D_loss: {:.4}; G_loss: {:.4}; recon_loss: {:.4}'
                   .format(it, D_loss.data[0], G_loss.data[0], recon_loss.data[0]))
 
+        # Print and plot every now and then
+        if it % 1000 == 0:
+
             z_real = z_real.unsqueeze(2).unsqueeze(3) # add 2 dimensions
-            samples = P(z_real).data.numpy()[:16]
+            samples = P(z_real)
+            samples = X_sample
+            if cuda:
+                samples = samples.cpu()
+            samples = samples.data.numpy()[:16]
 
             fig = plt.figure(figsize=(4, 4))
             gs = gridspec.GridSpec(4, 4)
