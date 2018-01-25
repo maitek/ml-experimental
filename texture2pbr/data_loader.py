@@ -61,12 +61,17 @@ class MaterialsDataset(Dataset):
             albedo = np.moveaxis(albedo, -1, 0)
             albedo = albedo.astype(np.float32)/255.0
         # get normal
+
         normal_file = self.data[material].get("normal",None)
         if normal_file is not None:
             normal = cv2.imread(normal_file)
+            #import pdb; pdb.set_trace()
             normal = np.moveaxis(normal, -1, 0)
-            normal = albedo.astype(np.float32)/255.0
-            normal = normal[:2,:,:] # only RG contains info
+            normal = normal.astype(np.float32)/255.0
+
+            # normalize vectors to unit normal
+            #normal /= (normal[0,:,:]+normal[0,:,:])
+            #normal = normal[:2,:,:] # only RG contains info
 
         item = {
                 "albedo": albedo,

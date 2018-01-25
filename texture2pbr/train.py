@@ -16,13 +16,13 @@ import cv2
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Texture to PBR')
-parser.add_argument('--cuda', action='store_true', default=False)
+parser.add_argument('--cuda', action='store_true', default=True)
 args = parser.parse_args()
 
 dataset_train = MaterialsDataset("PBR_dataset_cleaned/", test = False)
 dataset_test = MaterialsDataset("PBR_dataset_cleaned/", test = True)
-train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=16, shuffle=True)
-test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=16, shuffle=True)
+train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=32, shuffle=True)
+test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=32, shuffle=True)
 
 #torchvision.transforms.Normalize(mean, std)
 
@@ -31,28 +31,37 @@ test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=16, shuffle=T
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.batch_norm1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
-        self.batch_norm2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 3, kernel_size=3, padding=1)
+
+
+        self.net = [
+            nn.Conv2d(3, 32, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.ELU(),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.ELU(),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
+
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(32, 3, kernel_size=3, padding=1), nn.Sigmoid()
+        ]
+
+        for idx, module in enumerate(self.net):
+            self.add_module(str(idx), module)
 
     def forward(self, x):
 
-        x = self.batch_norm1(self.conv1(x))
-
-        x = F.relu(x)
-        x = self.batch_norm2(self.conv2(x))
-        x = F.relu(x)
-        x = F.sigmoid(self.conv3(x))
-
+        for layer in self.net:
+            #print(x.size())
+            x = layer(x)
         return x
 
 model = Net()
 if args.cuda:
     model.cuda()
 
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
 # run forever
 for epoch in forever():
@@ -69,7 +78,7 @@ for epoch in forever():
         data, target = Variable(albedo), Variable(normal)
         optimizer.zero_grad()
         output = model(data)
-        loss = F.l1_loss(output, target)
+        loss = F.mse_loss(output, target)
         loss.backward()
         optimizer.step()
         train_loss.append(loss.data[0])
@@ -83,14 +92,21 @@ for epoch in forever():
             albedo, normal = albedo.cuda(), normal.cuda()
         data, target = Variable(albedo), Variable(normal)
         output = model(data)
-        loss = F.l1_loss(output, target)
+        loss = F.mse_loss(output, target)
         test_loss.append(loss.data[0])
 
     print('Train loss: {:.4f}, Test loss: {:.4f} time: {:.4f} seconds'.format(np.mean(train_loss),np.mean(test_loss), time()-tic))
-    if epoch % 10 == 0:
+    if epoch % 100 == 0:
 
         if args.cuda:
-            output, data = output.cpu(), normal.cpu()
+            output, normal = output.cpu(), normal.cpu()
+
+        # pad normal map
+        nb, c, h, w = output.size()
+
+        import pdb; pdb.set_trace()
+
+        #output = torch.cat((output, torch.zeros(nb,1,h,w)), 1)
 
         normal_grid = make_grid(output.data, nrow=4).numpy()
         normal_grid = np.moveaxis(normal_grid,0,-1)
@@ -98,11 +114,12 @@ for epoch in forever():
 
         plt.subplot(121)
         plt.imshow(cv2.cvtColor(normal_grid, cv2.COLOR_BGR2RGB))
-
-        normal_grid_true = make_grid(normal.cpu(), nrow=4).numpy()
+        #import pdb; pdb.set_trace()
+        #normal = torch.cat((normal, torch.zeros(nb,1,h,w)), 1)
+        normal_grid_true = make_grid(normal, nrow=4).numpy()
         normal_grid_true = np.moveaxis(normal_grid_true,0,-1)
         #normal_grid_true = np.dstack((normal_grid_true, np.zeros_like(normal_grid_true[:,:,1])))
-        import pdb; pdb.set_trace()
+
         plt.subplot(122)
         plt.imshow(cv2.cvtColor(normal_grid_true, cv2.COLOR_BGR2RGB))
         plt.show()
