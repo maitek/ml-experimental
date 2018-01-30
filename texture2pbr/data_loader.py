@@ -30,13 +30,15 @@ class MaterialsDataset(Dataset):
                 path = os.path.join(folder,file_name)
 
                 if os.path.exists(path):
-                    texture_dict[texture] = path
+                    im = cv2.imread(path)
+                    if im is not None:
+                        texture_dict[texture] = path
 
             # check if all requested textures are found
             if len(texture_dict) == len(requested_textures):
                 self.data[material] = texture_dict
                 self.materials_list.append(material)
-
+        #import pdb; pdb.set_trace()
         # random split
         random.seed(42)
         random.shuffle(self.materials_list)
@@ -49,7 +51,7 @@ class MaterialsDataset(Dataset):
             print("Test set: {} images".format(len(self.materials_list)))
         else:
             self.materials_list = self.materials_list[:num_train]
-            print("Test set: {} images".format(len(self.materials_list)))
+            print("Train set: {} images".format(len(self.materials_list)))
 
 
     def __len__(self):
@@ -68,6 +70,7 @@ class MaterialsDataset(Dataset):
             albedo = cv2.imread(albedo_file)
             albedo = np.moveaxis(albedo, -1, 0)
             albedo = albedo.astype(np.float32)/255.0
+
         # get normal
 
         normal_file = self.data[material].get("normal",None)
@@ -83,7 +86,7 @@ class MaterialsDataset(Dataset):
             #normal = normal[:2,:,:] # only RG contains info
 
         # data augmentation
-        transforms.random_mirror()
+        #transforms.random_mirror()
 
         item = {
                 "albedo": albedo,
@@ -94,7 +97,7 @@ class MaterialsDataset(Dataset):
         return item
 
 def test():
-    dataset = MaterialsDataset("/Users/sundholm/Data/PBR_dataset_cleaned")
+    dataset = MaterialsDataset("PBR_dataset_256")
     test_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
     for batch_idx, batch_item in enumerate(test_loader):
         albedo = batch_item["albedo"]
@@ -106,10 +109,10 @@ def test():
         normal_grid = make_grid(normal, nrow=4).numpy()
         normal_grid = np.moveaxis(normal_grid,0,-1)
 
-        import pdb; pdb.set_trace()
-        plt.imshow(albedo_grid)
-        #import pdb; pdb.set_trace()
-        #plt.imshow(normal_grid)
+        plt.subplot(121)
+        plt.imshow(cv2.cvtColor(albedo_grid, cv2.COLOR_BGR2RGB))
+        plt.subplot(122)
+        plt.imshow(cv2.cvtColor(normal_grid, cv2.COLOR_BGR2RGB))
         plt.show()
 
 if __name__ == "__main__":

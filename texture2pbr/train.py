@@ -49,7 +49,7 @@ class Net(nn.Module):
             #nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
 
             #nn.Conv2d(32, 3, kernel_size=3, padding=1),
-
+            init.orthogonal(self.conv1.weight, init.calculate_gain('relu')
         ]
 
         for idx, module in enumerate(self.net):
@@ -68,7 +68,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         self.relu = nn.ReLU()
-        self.conv1 = nn.Conv2d(3, 64, (5, 5), (1, 1), (2, 2))
+        self.conv1 = nn.Conv2d(3, 64, (5, 5), (1, 1),[:16,:,:,:] (2, 2))
         self.conv2 = nn.Conv2d(64, 64, (3, 3), (1, 1), (1, 1))
         self.conv3 = nn.Conv2d(64, 32, (3, 3), (1, 1), (1, 1))
         self.conv4 = nn.Conv2d(32, 3* upscale_factor ** 2, (3, 3), (1, 1), (1, 1))
@@ -129,7 +129,7 @@ for epoch in forever():
         test_loss.append(loss.data[0])
 
     print('Train loss: {:.4f}, Test loss: {:.4f} time: {:.4f} seconds'.format(np.mean(train_loss),np.mean(test_loss), time()-tic))
-    if epoch % 100 == 0:
+    if epoch % 10 == 0:
 
         if args.cuda:
             output, normal = output.cpu(), normal.cpu()
@@ -160,4 +160,4 @@ for epoch in forever():
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
         plt.savefig('{}/{}.png'.format(out_dir,str(epoch)), bbox_inches='tight')
-        torch.save('{}/checkpoint_{}.pth.tar'.format(out_dir,str(epoch)))
+        torch.save(model,'{}/checkpoint_{}.pth.tar'.format(out_dir,str(epoch)))
