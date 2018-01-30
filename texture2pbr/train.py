@@ -13,6 +13,7 @@ from time import time
 from torchvision.utils import make_grid
 from itertools import count as forever
 import cv2
+import torch.nn.init as init
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Texture to PBR')
@@ -49,10 +50,13 @@ class Net(nn.Module):
             #nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
 
             #nn.Conv2d(32, 3, kernel_size=3, padding=1),
-            init.orthogonal(self.conv1.weight, init.calculate_gain('relu')
+
         ]
 
         for idx, module in enumerate(self.net):
+            # initilze convolutional
+            if module.__class__.__name__ == "Conv2d":
+                init.orthogonal(module.weight, init.calculate_gain('relu'))
             self.add_module(str(idx), module)
 
     def forward(self, x):
