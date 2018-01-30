@@ -19,14 +19,16 @@ parser = argparse.ArgumentParser(description='PyTorch Texture to PBR')
 parser.add_argument('--cuda', action='store_true', default=True)
 args = parser.parse_args()
 
-dataset_train = MaterialsDataset("PBR_dataset_cleaned/", test = False)
-dataset_test = MaterialsDataset("PBR_dataset_cleaned/", test = True)
+dataset_train = MaterialsDataset("PBR_dataset_256/", test = True)
+dataset_test = MaterialsDataset("PBR_dataset_256/", test = False)
 train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=32, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=32, shuffle=True)
 
 #torchvision.transforms.Normalize(mean, std)
 
-
+if not torch.cuda.is_available():
+    print("Warning cuda not found, falling back on CPU!")
+    args.cuda = False
 
 class Net(nn.Module):
     def __init__(self):
@@ -34,17 +36,20 @@ class Net(nn.Module):
 
 
         self.net = [
-            nn.Conv2d(3, 32, kernel_size=3, padding=1), nn.ELU(),
-            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.ELU(),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
-            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.ELU(),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(3, 64, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1), nn.ELU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1), nn.ELU(),
+            nn.Conv2d(64, 3*4**2, kernel_size=3, padding=1), nn.ELU(),
+            nn.PixelShuffle(4),
+            nn.Sigmoid(),
+            #nn.Upsample(scale_factor=2),
+            #nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
+            #nn.Upsample(scale_factor=2),
+            #nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
 
-            nn.Upsample(scale_factor=2),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
-            nn.Upsample(scale_factor=2),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ELU(),
-            nn.Conv2d(32, 3, kernel_size=3, padding=1), nn.Sigmoid()
+            #nn.Conv2d(32, 3, kernel_size=3, padding=1),
+
         ]
 
         for idx, module in enumerate(self.net):
@@ -56,6 +61,34 @@ class Net(nn.Module):
             #print(x.size())
             x = layer(x)
         return x
+
+"""
+class Net(nn.Module):
+    def __init__(self, upscale_factor):
+        super(Net, self).__init__()
+
+        self.relu = nn.ReLU()
+        self.conv1 = nn.Conv2d(3, 64, (5, 5), (1, 1), (2, 2))
+        self.conv2 = nn.Conv2d(64, 64, (3, 3), (1, 1), (1, 1))
+        self.conv3 = nn.Conv2d(64, 32, (3, 3), (1, 1), (1, 1))
+        self.conv4 = nn.Conv2d(32, 3* upscale_factor ** 2, (3, 3), (1, 1), (1, 1))
+        self.pixel_shuffle = nn.PixelShuffle(upscale_factor)
+
+        self._initialize_weights()
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.relu(self.conv2(x))
+        x = self.relu(self.conv3(x))
+        x = self.pixel_shuffle(self.conv4(x))
+        return x
+
+    def _initialize_weights(self):
+        init.orthogonal(self.conv1.weight, init.calculate_gain('relu'))
+        init.orthogonal(self.conv2.weight, init.calculate_gain('relu'))
+        init.orthogonal(self.conv3.weight, init.calculate_gain('relu'))
+init.orthogonal(self.conv4.weight)
+"""
 
 model = Net()
 if args.cuda:
@@ -104,7 +137,7 @@ for epoch in forever():
         # pad normal map
         nb, c, h, w = output.size()
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         #output = torch.cat((output, torch.zeros(nb,1,h,w)), 1)
 
@@ -122,4 +155,9 @@ for epoch in forever():
 
         plt.subplot(122)
         plt.imshow(cv2.cvtColor(normal_grid_true, cv2.COLOR_BGR2RGB))
-        plt.show()
+        #plt.show()
+        out_dir = "output"
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        plt.savefig('{}/{}.png'.format(out_dir,str(epoch)), bbox_inches='tight')
+        torch.save('{}/checkpoint_{}.pth.tar'.format(out_dir,str(epoch)))

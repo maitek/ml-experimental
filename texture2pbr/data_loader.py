@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from time import time
 import cv2
 import random
+from tqdm import tqdm
 
 class MaterialsDataset(Dataset):
     """ PBR Material dataset
@@ -20,7 +21,7 @@ class MaterialsDataset(Dataset):
         self.data = dict()
         self.materials_list = list()
 
-        for material in folders:
+        for material in tqdm(folders):
             folder = os.path.join(root_folder,material)
             texture_dict = dict()
             for texture in requested_textures:
@@ -41,10 +42,15 @@ class MaterialsDataset(Dataset):
         random.shuffle(self.materials_list)
         num_train = int(len(self.materials_list)*0.75)
 
+
+
         if test:
             self.materials_list = self.materials_list[num_train:]
+            print("Test set: {} images".format(len(self.materials_list)))
         else:
             self.materials_list = self.materials_list[:num_train]
+            print("Test set: {} images".format(len(self.materials_list)))
+
 
     def __len__(self):
         return len(self.materials_list)
@@ -52,6 +58,8 @@ class MaterialsDataset(Dataset):
     def __getitem__(self, idx):
 
         material = self.materials_list[idx]
+
+
 
         # get albedo
         albedo_file = self.data[material].get("albedo",None)
@@ -69,9 +77,13 @@ class MaterialsDataset(Dataset):
             normal = np.moveaxis(normal, -1, 0)
             normal = normal.astype(np.float32)/255.0
 
+            #import pdb; pdb.set_trace()
             # normalize vectors to unit normal
             #normal /= (normal[0,:,:]+normal[0,:,:])
             #normal = normal[:2,:,:] # only RG contains info
+
+        # data augmentation
+        transforms.random_mirror()
 
         item = {
                 "albedo": albedo,

@@ -8,7 +8,7 @@ from torchvision.utils import make_grid
 """
 
 INPUT_FOLDER = "PBR_dataset"
-OUTPUT_FOLDER = "PBR_dataset_cleaned"
+OUTPUT_FOLDER = "PBR_dataset_256"
 
 folders = [x for x in os.listdir(INPUT_FOLDER) if os.path.isdir(os.path.join(INPUT_FOLDER,x))]
 
@@ -46,6 +46,9 @@ for folder in folders:
         # find ambien occlusion
         if string_contains(file_name, ["ao", "ambient", "occ"]):
             texture_dict[folder]["ao"] = os.path.join(INPUT_FOLDER,folder,file_name)
+        # find ambien occlusion
+        if string_contains(file_name, ["height",]):
+            texture_dict[folder]["height"] = os.path.join(INPUT_FOLDER,folder,file_name)
 
 # create
 if not os.path.exists(OUTPUT_FOLDER):
@@ -55,6 +58,9 @@ for material in texture_dict:
     folder = os.path.join(OUTPUT_FOLDER,material)
     if not os.path.exists(folder):
         os.makedirs(folder)
+
+    rx = np.random()
+
     for texture_type in texture_dict[material]:
         src = texture_dict[material][texture_type]
         dst = os.path.join(folder,"{}-{}.png".format(material,texture_type))
@@ -62,7 +68,10 @@ for material in texture_dict:
         #try:
             #shutil.copyfile(src,dst)
         im = cv2.imread(src)
-        im = cv2.resize(im,(256,256))
-        cv2.imwrite(dst,im)
+
+
+        crop = im[0:256,0:256]
+        #im = cv2.resize(im,(256,256))
+        cv2.imwrite(dst,crop)
         #except:
         #import pdb; pdb.set_trace()
