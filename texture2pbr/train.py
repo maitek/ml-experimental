@@ -22,8 +22,8 @@ args = parser.parse_args()
 
 dataset_train = MaterialsDataset("PBR_dataset_256/", test = True)
 dataset_test = MaterialsDataset("PBR_dataset_256/", test = False)
-train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=32, shuffle=True)
-test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=32, shuffle=True)
+train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=16, shuffle=True)
+test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=16, shuffle=True)
 
 #torchvision.transforms.Normalize(mean, std)
 
@@ -35,13 +35,17 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-
+        nf = 64
         self.net = [
-            nn.Conv2d(3, 64, kernel_size=3, padding=1), nn.ELU(),
-            nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1), nn.ELU(),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1), nn.ELU(),
-            nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1), nn.ELU(),
-            nn.Conv2d(64, 3*4**2, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(3, nf, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(nf, nf, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(nf, nf, kernel_size=4, stride=2, padding=1), nn.ELU(),
+            nn.Conv2d(nf, nf, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(nf, nf, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(nf*2, nf*2, kernel_size=4, stride=2, padding=1), nn.ELU(),
+            nn.Conv2d(nf*2, nf*2, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(nf*2, nf*2, kernel_size=3, padding=1), nn.ELU(),
+            nn.Conv2d(nf*2, 3*4**2, kernel_size=3, padding=1), nn.ELU(),
             nn.PixelShuffle(4),
             nn.Sigmoid(),
             #nn.Upsample(scale_factor=2),
@@ -94,15 +98,21 @@ class Net(nn.Module):
 init.orthogonal(self.conv4.weight)
 """
 
-model = Net()
+from unet import UNet
+
+model = UNet(n_channels=3, n_output=3)
+
 if args.cuda:
     model.cuda()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+lr=0.001
 
 # run forever
 for epoch in forever():
-    print("Epoch {}".format(epoch) )
+    lr *= 0.9995
+    print("Epoch {}, lr: {}".format(epoch,lr) )
+    optimizer = torch.optim.Adam(model.parameters(),lr=lr )
+
     train_loss = list()
     tic = time()
     # Train Epoch
@@ -119,19 +129,24 @@ for epoch in forever():
         loss.backward()
         optimizer.step()
         train_loss.append(loss.data[0])
+    #import pdb; pdb.set_trace()
 
     # Test Epoch
-    test_loss = list()
+    """test_loss = list()
     for batch_idx, batch_item in enumerate(test_loader):
         albedo = batch_item["albedo"]
         normal = batch_item["normal"]
         if args.cuda:
             albedo, normal = albedo.cuda(), normal.cuda()
         data, target = Variable(albedo), Variable(normal)
+
         output = model(data)
         loss = F.mse_loss(output, target)
-        test_loss.append(loss.data[0])
 
+        test_loss.append(loss.data[0])
+    """
+    test_loss = 0
+    #import pdb; pdb.set_trace()
     print('Train loss: {:.4f}, Test loss: {:.4f} time: {:.4f} seconds'.format(np.mean(train_loss),np.mean(test_loss), time()-tic))
     if epoch % 10 == 0:
 
@@ -160,7 +175,7 @@ for epoch in forever():
         plt.subplot(122)
         plt.imshow(cv2.cvtColor(normal_grid_true, cv2.COLOR_BGR2RGB))
         #plt.show()
-        out_dir = "output"
+        out_dir = "output_128"
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
         plt.savefig('{}/{}.png'.format(out_dir,str(epoch)), bbox_inches='tight')

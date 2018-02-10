@@ -76,6 +76,9 @@ class MaterialsDataset(Dataset):
         normal_file = self.data[material].get("normal",None)
         if normal_file is not None:
             normal = cv2.imread(normal_file)
+
+
+
             #import pdb; pdb.set_trace()
             normal = np.moveaxis(normal, -1, 0)
             normal = normal.astype(np.float32)/255.0
@@ -97,7 +100,7 @@ class MaterialsDataset(Dataset):
         return item
 
 def test():
-    dataset = MaterialsDataset("PBR_dataset_256")
+    dataset = MaterialsDataset("PBR_dataset_128")
     test_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
     for batch_idx, batch_item in enumerate(test_loader):
         albedo = batch_item["albedo"]
