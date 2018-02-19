@@ -11,16 +11,16 @@ import os
 from torch.autograd import Variable
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
-
+from models.DCGAN_mnist import Generator, Discriminator, Encoder
 
 mb_size = 32
-z_dim = 3
+z_dim = 10
 X_dim = 28*28
 y_dim = 10
 h_dim = 256
 cnt = 0
-lr = 1e-4
-cuda = True
+lr = 1e-3
+cuda = torch.cuda.is_available()
 
 mnist = datasets.MNIST('data', train=True, download=True, transform=transforms.ToTensor())
 data_loader = DataLoader(mnist, batch_size=mb_size, shuffle=True, num_workers=0, drop_last=True)
@@ -39,6 +39,8 @@ Q = torch.nn.Sequential(
     torch.nn.Linear(h_dim, z_dim)
 )
 
+
+
 G = torch.nn.Sequential(
     torch.nn.Linear(z_dim, h_dim),
     torch.nn.ReLU(),
@@ -52,6 +54,10 @@ D = torch.nn.Sequential(
     torch.nn.ReLU(),
     torch.nn.Linear(h_dim, 1),
 )
+
+Q = Encoder()
+G = Generator()
+D = Discriminator()
 
 if cuda:
     Q = Q.cuda()
@@ -71,7 +77,7 @@ D_solver = optim.Adam(D.parameters(), lr=lr)
 for it in range(1000000):
 
     # Reconstruction step
-    z = Variable(torch.randn(mb_size, z_dim))
+    z = Variable(torch.randn(mb_size, z_dim,1,1))
     if cuda:
         z = z.cuda()
     X_fake = G(z)
@@ -84,9 +90,9 @@ for it in range(1000000):
 
     for _ in range(5):
         # Sample data
-        z = Variable(torch.randn(mb_size, z_dim))
+        z = Variable(torch.randn(mb_size, z_dim,1,1))
         X, _ = next(batch_iterator)
-        X = Variable(X).view(-1,X_dim)
+        X = Variable(X)#.view(-1,X_dim)
         if cuda:
             X = X.cuda()
             z = z.cuda()
@@ -111,11 +117,10 @@ for it in range(1000000):
     # Generator forward-loss-backward-update
     X, _ = next(batch_iterator)
     X = Variable(X).view(-1,X_dim)
-    z = Variable(torch.randn(mb_size, z_dim))
+    z = Variable(torch.randn(mb_size, z_dim,1,1))
     if cuda:
         X = X.cuda()
         z = z.cuda()
-
     G_sample = G(z)
     D_fake = D(G_sample)
 
@@ -128,7 +133,7 @@ for it in range(1000000):
     reset_grad()
 
     # Print and plot every now and then
-    if it % 1000 == 0:
+    if it % 100 == 0:
         print('Iter-{}; D_loss: {}; G_loss: {}, Q_loss: {}'
               .format(it, D_loss.cpu().data.numpy(), G_loss.cpu().data.numpy(),  Q_loss.cpu().data.numpy()))
 
