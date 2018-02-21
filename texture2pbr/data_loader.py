@@ -77,7 +77,11 @@ class MaterialsDataset(Dataset):
             normal = cv2.imread(normal_file)
             normal = np.moveaxis(normal, -1, 0)
             normal = normal.astype(np.float32)/255.0
-            #normal /= (np.std(normal)*10)
+            #import pdb; pdb.set_trace()
+
+            #normal / np.std(normal) * 10
+            #import pdb; pdb.set_trace()
+
 
 
         # get roughness
@@ -86,6 +90,7 @@ class MaterialsDataset(Dataset):
             roughness = cv2.imread(roughness_file)
             roughness = np.moveaxis(roughness, -1, 0)
             roughness = roughness.astype(np.float32)/255.0
+            roughness = roughness-np.mean(roughness)+0.5
 
         # get roughness
         ao_file = self.data[material].get("ao",None)
@@ -93,6 +98,7 @@ class MaterialsDataset(Dataset):
             ao = cv2.imread(ao_file)
             ao = np.moveaxis(ao, -1, 0)
             ao = ao.astype(np.float32)/255.0
+            #ao = ao-np.mean(ao)+0.5
 
 
             #import pdb; pdb.set_trace()
@@ -118,7 +124,7 @@ class MaterialsDataset(Dataset):
 
 def test():
     dataset = MaterialsDataset("PBR_dataset_cleaned")
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     test_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
     for batch_idx, batch_item in enumerate(test_loader):
         albedo = batch_item["albedo"]
