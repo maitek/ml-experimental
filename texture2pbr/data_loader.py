@@ -90,7 +90,7 @@ class MaterialsDataset(Dataset):
             roughness = cv2.imread(roughness_file)
             roughness = np.moveaxis(roughness, -1, 0)
             roughness = roughness.astype(np.float32)/255.0
-            roughness = roughness-np.mean(roughness)+0.5
+            #roughness = roughness-np.mean(roughness)+0.5
 
         # get roughness
         ao_file = self.data[material].get("ao",None)
