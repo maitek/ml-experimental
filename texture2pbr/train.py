@@ -100,7 +100,9 @@ init.orthogonal(self.conv4.weight)
 
 from unet import UNet
 
-model = UNet(n_channels=3, n_output=3)
+model = UNet(n_channels=3, n_output=5)
+#if os.path.exists("model_latest.pth"):
+    #model = torch.load("model_latest.pth")
 
 if args.cuda:
     model.cuda()
@@ -119,10 +121,14 @@ for epoch in forever():
     for batch_idx, batch_item in enumerate(train_loader):
         albedo = batch_item["albedo"]
         normal = batch_item["normal"]
+        ao = batch_item["ao"]
+        roughness = batch_item["roughness"]
+        
+        target = torch.cat([normal,roughness[:,0:1,:,:],ao[:,0:1,:,:]],1)
 
         if args.cuda:
-            albedo, normal = albedo.cuda(), normal.cuda()
-        data, target = Variable(albedo), Variable(normal)
+            albedo, target = albedo.cuda(), target.cuda()
+        data, target = Variable(albedo), Variable(target)
         optimizer.zero_grad()
         output = model(data)
         loss = F.mse_loss(output, target)
@@ -149,10 +155,18 @@ for epoch in forever():
     #import pdb; pdb.set_trace()
     print('Train loss: {:.4f}, Test loss: {:.4f} time: {:.4f} seconds'.format(np.mean(train_loss),np.mean(test_loss), time()-tic))
     if epoch % 10 == 0:
+        torch.save(model,"model_latest.pth")
 
         if args.cuda:
-            output, normal = output.cpu(), normal.cpu()
+            output, target = output.cpu(), target.cpu()
+        output_normal = output[:,0:3,:,:]
+        output_ao = output[:,2:3,:,:]
+        output_roughness = output[:,3:4,:,:]
 
+        target_normal = target[:,0:3,:,:]
+        target_ao = target[:,2:3,:,:]
+        target_roughness = target[:,3:4,:,:]
+        #import pdb; pdb.set_trace()
         # pad normal map
         nb, c, h, w = output.size()
 
@@ -160,22 +174,40 @@ for epoch in forever():
 
         #output = torch.cat((output, torch.zeros(nb,1,h,w)), 1)
 
-        normal_grid = make_grid(output.data, nrow=4).numpy()
-        normal_grid = np.moveaxis(normal_grid,0,-1)
-        #normal_grid = np.dstack((normal_grid, np.zeros_like(normal_grid[:,:,1])))
 
-        plt.subplot(121)
-        plt.imshow(cv2.cvtColor(normal_grid, cv2.COLOR_BGR2RGB))
-        #import pdb; pdb.set_trace()
-        #normal = torch.cat((normal, torch.zeros(nb,1,h,w)), 1)
-        normal_grid_true = make_grid(normal, nrow=4).numpy()
-        normal_grid_true = np.moveaxis(normal_grid_true,0,-1)
-        #normal_grid_true = np.dstack((normal_grid_true, np.zeros_like(normal_grid_true[:,:,1])))
+        plt.subplot(321)
+        grid = make_grid(output_normal.data, nrow=4).numpy()
+        grid = np.moveaxis(grid,0,-1)
+        plt.imshow(cv2.cvtColor(grid, cv2.COLOR_BGR2RGB))
 
-        plt.subplot(122)
-        plt.imshow(cv2.cvtColor(normal_grid_true, cv2.COLOR_BGR2RGB))
+        plt.subplot(322)
+        grid = make_grid(target_normal.data, nrow=4).numpy()
+        grid = np.moveaxis(grid,0,-1)
+        plt.imshow(cv2.cvtColor(grid, cv2.COLOR_BGR2RGB))
+
+        plt.subplot(323)
+        grid = make_grid(output_ao.data, nrow=4).numpy()
+        grid = np.moveaxis(grid,0,-1)
+        plt.imshow(cv2.cvtColor(grid, cv2.COLOR_BGR2RGB))
+
+        plt.subplot(324)
+        grid = make_grid(target_ao.data, nrow=4).numpy()
+        grid = np.moveaxis(grid,0,-1)
+        plt.imshow(cv2.cvtColor(grid, cv2.COLOR_BGR2RGB))
+
+        plt.subplot(325)
+        grid = make_grid(output_roughness.data, nrow=4).numpy()
+        grid = np.moveaxis(grid,0,-1)
+        plt.imshow(cv2.cvtColor(grid, cv2.COLOR_BGR2RGB))
+
+        plt.subplot(326)
+        grid = make_grid(target_roughness.data, nrow=4).numpy()
+        grid = np.moveaxis(grid,0,-1)
+        plt.imshow(cv2.cvtColor(grid, cv2.COLOR_BGR2RGB))
+
+
         #plt.show()
-        out_dir = "output_128"
+        out_dir = "output_128_2"
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
         plt.savefig('{}/{}.png'.format(out_dir,str(epoch)), bbox_inches='tight')
