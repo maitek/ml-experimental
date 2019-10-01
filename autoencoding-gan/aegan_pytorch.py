@@ -155,5 +155,6 @@ for it in range(1000000):
             os.makedirs('out/')
 
         plt.savefig('out/{}.png'.format(str(cnt).zfill(3)), bbox_inches='tight')
+        torch.save('out/{}.png'.format(str(cnt).zfill(3)))
         cnt += 1
         plt.close(fig)
